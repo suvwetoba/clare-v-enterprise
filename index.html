@@ -263,6 +263,20 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .chip:hover{border-color:var(--accent);color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
 
+.shop-toolbar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.searchbox{flex:1;min-width:240px;display:flex;align-items:center;gap:.6rem;background:var(--panel);border:2px solid var(--line);border-radius:999px;padding:.7rem .95rem;box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.searchbox input{border:none;outline:none;background:transparent;width:100%;font:inherit;color:var(--ink)}
+.searchbox input::placeholder{color:var(--muted)}
+.quickrow{display:flex;flex-wrap:wrap;gap:.5rem}
+.quickpill{border:2px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:999px;padding:.45rem .8rem;font-size:.74rem;font-weight:bold;letter-spacing:.04em;text-transform:uppercase}
+.quickpill:hover{border-color:var(--accent);transform:translateY(-1px)}
+.quickpill:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
+
+.hero__highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:1.3rem}
+.highlight{background:rgba(255,255,255,.72);backdrop-filter:blur(8px);border:2px solid var(--line);border-radius:16px;padding:1rem 1rem 1.05rem;box-shadow:4px 4px 0 var(--shadow)}
+.highlight strong{display:block;font-size:.98rem;text-transform:uppercase;margin-bottom:.28rem}
+.highlight span{font-size:.84rem;color:var(--muted)}
+
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:1.4rem}
 
 .card{
@@ -510,6 +524,15 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .foot__meta{font-family:"Courier New",monospace;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;opacity:.6;line-height:2}
 
 /* ---------- modal ---------- */
+.toast{
+  position:fixed;right:1rem;bottom:5.4rem;z-index:220;
+  background:var(--ink);color:var(--ground);border:2px solid var(--line);
+  border-radius:999px;padding:.7rem 1rem;font-size:.82rem;font-weight:bold;
+  box-shadow:6px 6px 0 rgba(0,0,0,.2);opacity:0;pointer-events:none;
+  transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;
+}
+.toast.is-show{opacity:1;transform:translateY(0)}
+
 .modal{
   position:fixed;inset:0;z-index:200;display:none;
   place-items:center;padding:1.2rem;
@@ -537,6 +560,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 @keyframes fall{
   0%{opacity:1;transform:translate(0,0) rotate(0)}
   100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--rot))}
+}
+
+@media (max-width:720px){
+  .hero__highlights{grid-template-columns:1fr}
+  .shop-toolbar{flex-direction:column;align-items:stretch}
+  .searchbox{width:100%}
+  .quickrow{justify-content:flex-start}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -602,6 +632,20 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
             <div class="stat__l">Local delivery</div>
           </div>
         </div>
+        <div class="hero__highlights">
+          <div class="highlight">
+            <strong>Party-ready</strong>
+            <span>Mix bags and boxes built for birthdays and school treats.</span>
+          </div>
+          <div class="highlight">
+            <strong>Sealed packs</strong>
+            <span>Each item is packed fresh and sent out with care.</span>
+          </div>
+          <div class="highlight">
+            <strong>Easy order flow</strong>
+            <span>Choose, add, and send your list in a few taps.</span>
+          </div>
+        </div>
       </div>
 
       <div class="springbox">
@@ -624,6 +668,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
           </div>
         </div>
 
+        <div class="shop-toolbar">
+          <label class="searchbox" for="searchInput">
+            <span aria-hidden="true">🔎</span>
+            <input id="searchInput" type="search" placeholder="Search sweets, toys or bundles">
+          </label>
+          <div class="quickrow" id="quickPicks"></div>
+        </div>
         <div class="chips" id="chips" role="group" aria-label="Filter sweets"></div>
         <div class="grid" id="grid"></div>
       </div>
@@ -810,6 +861,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
   </div>
 </div>
 
+<div class="toast" id="toast" aria-live="polite"></div>
+
 <script>
 /* ============================================================
    EDIT THIS BLOCK — everything ClareVi needs to change is here.
@@ -983,9 +1036,16 @@ function art(kind){
 /* ---------- filters + grid ---------- */
 const cats = ["All", ...new Set(PRODUCTS.map(p => p.cat))];
 let activeCat = "All";
+let searchQuery = "";
 
 $("#chips").innerHTML = cats.map(c =>
   `<button class="chip" data-cat="${c}" aria-pressed="${c === "All"}">${c}</button>`).join("");
+
+$("#quickPicks").innerHTML = [
+  { id: "magic", label: "Magic Circle" },
+  { id: "comb", label: "Comb Pop" },
+  { id: "shot", label: "Crazy Shot" }
+].map(item => `<button class="quickpill" data-quick="${item.id}">${item.label}</button>`).join("");
 
 $("#chips").addEventListener("click", e => {
   const b = e.target.closest(".chip");
@@ -995,8 +1055,32 @@ $("#chips").addEventListener("click", e => {
   renderGrid();
 });
 
+$("#searchInput").addEventListener("input", e => {
+  searchQuery = e.target.value.trim().toLowerCase();
+  renderGrid();
+});
+
+$("#quickPicks").addEventListener("click", e => {
+  const b = e.target.closest("[data-quick]");
+  if (!b) return;
+  const p = PRODUCTS.find(x => x.id === b.dataset.quick);
+  if (!p) return;
+  const vi = 0;
+  addToCart(p.id, vi, 1);
+  showToast(`${p.name} added to your order`);
+  searchQuery = p.name.toLowerCase();
+  $("#searchInput").value = searchQuery;
+  renderGrid();
+});
+
 function renderGrid(){
-  const list = PRODUCTS.filter(p => activeCat === "All" || p.cat === activeCat);
+  const q = searchQuery.trim().toLowerCase();
+  const list = PRODUCTS.filter(p => {
+    const matchesCat = activeCat === "All" || p.cat === activeCat;
+    const haystack = `${p.name} ${p.desc} ${p.cat} ${p.facts.join(" ")} ${p.variants.map(v => v.label).join(" ")}`.toLowerCase();
+    const matchesSearch = !q || haystack.includes(q);
+    return matchesCat && matchesSearch;
+  });
   $("#grid").innerHTML = list.map(p => `
     <article class="card" data-id="${p.id}">
       <div class="card__art art--${p.hue}">
@@ -1076,6 +1160,14 @@ function subtotal(){ return cart.reduce((s, l) => s + lineOf(l).amount, 0); }
 function shipping(){
   const mode = document.querySelector('input[name="deliv"]:checked').value;
   return mode === "local" ? SHOP.deliveryFee : 0;
+}
+
+function showToast(message){
+  const t = $("#toast");
+  t.textContent = message;
+  t.classList.add("is-show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => t.classList.remove("is-show"), 1800);
 }
 
 function renderCart(){
