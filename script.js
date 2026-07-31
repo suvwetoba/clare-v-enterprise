@@ -20,6 +20,7 @@ const PRODUCTS = [
     kicker: "Spring + candy",
     art: "slinky",
     hue: "grape",
+    image: "images/magic-circle.jpg",
     desc: "A stretchy rainbow spring with a sealed cup of fruit candy inside. The sweet explodes in one bite; the spring keeps working long after it's gone.",
     facts: ["Fruit candy", "Toy included", "Ages 4+"],
     variants: [
@@ -35,6 +36,7 @@ const PRODUCTS = [
     kicker: "Comb + candy tube",
     art: "comb",
     hue: "lime",
+    image: "images/comb-pop.jpg",
     desc: "A real working mini comb with a cute animal cap, sitting on a tube of sweet candy. Comes in blue, orange, green and pink â€” she'll mix the colours unless you ask.",
     facts: ["4 colours", "Comb toy", "Ages 4+"],
     variants: [
@@ -50,6 +52,7 @@ const PRODUCTS = [
     kicker: "Chocolate + milk",
     art: "syringe",
     hue: "cocoa",
+    image: "images/crazy-shot.jpg",
     desc: "Chocolate and milk cream in a squeezy shot you push straight into your mouth. 7g each, 30 to a box. NAFDAC reg. no. A5-101255.",
     facts: ["7g each", "30 per box", "Chocolate + milk"],
     variants: [
@@ -65,6 +68,7 @@ const PRODUCTS = [
     kicker: "A bit of everything",
     art: "bag",
     hue: "sun",
+    image: "images/mix-bag.jpg",
     desc: "Three Magic Circles, three Crazy Shots and two Comb Pops in one bag. The easiest thing to hand a child who can't decide.",
     facts: ["8 pieces", "All three sweets", "Ready to gift"],
     variants: [
@@ -143,22 +147,9 @@ $("#tickerTrack").innerHTML = [...tickerBits, ...tickerBits]
 })();
 
 /* ---------- product art ---------- */
-function productImage(query, alt){
-  const url = `https://source.unsplash.com/featured/900x650/?${encodeURIComponent(query)}`;
-  return `<img src="${url}" alt="${alt}" loading="lazy" decoding="async">`;
-}
-
-function art(kind){
-  if (kind === "slinky"){
-    return productImage("rainbow candy bright", "Real rainbow spring candy");
-  }
-  if (kind === "comb"){
-    return productImage("candy comb toy", "Real comb pop candy");
-  }
-  if (kind === "syringe"){
-    return productImage("chocolate candy shot", "Real chocolate shot candy");
-  }
-  return productImage("mixed candy sweets", "Real mixed bag of sweets");
+function art(kind, productImage){
+  if (!productImage) return `<img src="images/placeholder.jpg" alt="Product image" loading="lazy" decoding="async">`;
+  return `<img src="${productImage}" alt="${kind}" loading="lazy" decoding="async">`;
 }
 
 /* ---------- filters + grid ---------- */
@@ -226,7 +217,7 @@ function renderGrid(){
         <button class="fav-btn ${favorites.includes(p.id) ? "is-fav" : ""}" data-fav="${p.id}" aria-label="${favorites.includes(p.id) ? "Remove" : "Save"} ${p.name} as favourite">${favorites.includes(p.id) ? "â˜…" : "â˜†"}</button>
         <span class="kicker">${p.kicker}</span>
         <span class="price-sticker">${SHOP.pricesNote}</span>
-        ${art(p.art)}
+        ${art(p.art, p.image)}
       </div>
       <div class="card__body">
         <h3>${p.name}</h3>
