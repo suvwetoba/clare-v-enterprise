@@ -610,6 +610,12 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
   .shop-toolbar{flex-direction:column;align-items:stretch}
   .searchbox{width:100%}
   .quickrow{justify-content:flex-start}
+  .pick-stage__bag{right:6%;bottom:7%;width:116px;height:116px}
+  .pick-stage__bubble{width:76px;height:76px;font-size:1.7rem}
+  .fab{bottom:1rem;right:.8rem}
+  .receipt__head p{font-size:.58rem}
+  .line__meta{display:block}
+  .line__rm{margin-top:.3rem}
 }
 
 @media (prefers-reduced-motion:reduce){
@@ -899,6 +905,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 <button class="fab" id="fab" aria-label="Open your order">
   Order <span class="fab__count" id="fabCount">0</span>
 </button>
+
+<div class="fab fab--mini" id="mobileSummary" aria-live="polite" style="display:none;right:auto;left:1rem;bottom:1rem;justify-content:center;min-width:140px">
+  <span id="mobileSummaryText">0 items</span>
+</div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
   <div class="modal__box">
@@ -1221,10 +1231,16 @@ $("#grid").addEventListener("click", e => {
     const vi = Number(card.querySelector(`input[name="v-${p.id}"]:checked`).value);
     const qty = Math.max(1, parseInt(input.value, 10) || 1);
     addToCart(p.id, vi, qty);
-    add.classList.add("is-added");
+      add.classList.add("is-added");
     add.textContent = "Added ✓";
     const icon = p.id === "magic" ? "✦" : p.id === "comb" ? "🪄" : p.id === "shot" ? "🍫" : "🎁";
     playPickAnimation(icon);
+    if (window.innerWidth <= 1000) {
+      const rail = $("#rail");
+      if (rail && !rail.classList.contains("is-open")) {
+        rail.classList.add("is-open");
+      }
+    }
     burst(add);
     setTimeout(() => { add.classList.remove("is-added"); add.textContent = "Add to order"; }, 1300);
   }
@@ -1301,6 +1317,8 @@ function renderOrderProgress(){
 
 function renderCart(){
   const body = $("#cartBody");
+  const mobileSummary = $("#mobileSummary");
+  const mobileSummaryText = $("#mobileSummaryText");
   if (!cart.length){
     body.innerHTML = `<div class="empty">
       <svg viewBox="0 0 100 80" aria-hidden="true">
@@ -1330,8 +1348,13 @@ function renderCart(){
   $("#tShip").textContent  = mode === "courier" ? "quoted" : (ship ? money(ship) : "free");
   $("#tGrand").textContent = money(sub + ship);
   const count = cart.reduce((s, l) => s + l.qty, 0);
+  const total = subtotal() + shipping();
   $("#fabCount").textContent = count;
   $("#receiptDate").textContent = count ? `${count} item${count > 1 ? "s" : ""} · not yet sent` : "ClareVi Entereprise";
+  if (mobileSummary && mobileSummaryText){
+    mobileSummary.style.display = count ? "inline-flex" : "none";
+    mobileSummaryText.textContent = `${count} item${count > 1 ? "s" : ""} · ${money(total)}`;
+  }
   renderOrderProgress();
 }
 
