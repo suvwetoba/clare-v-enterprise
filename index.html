@@ -985,10 +985,14 @@ function addQuickItem(id){
 
 /* ---------- theme ---------- */
 const themeBtn = $("#themeBtn");
+const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+if (!document.documentElement.getAttribute("data-theme")) {
+  document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+}
+
 themeBtn.addEventListener("click", () => {
-  const cur = document.documentElement.getAttribute("data-theme");
-  const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const next = cur ? (cur === "dark" ? "light" : "dark") : (sysDark ? "light" : "dark");
+  const cur = document.documentElement.getAttribute("data-theme") || "light";
+  const next = cur === "dark" ? "light" : "dark";
   document.documentElement.setAttribute("data-theme", next);
 });
 
