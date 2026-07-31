@@ -272,6 +272,11 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .quickpill:hover{border-color:var(--accent);transform:translateY(-1px)}
 .quickpill:focus-visible{outline:3px solid var(--magenta);outline-offset:2px}
 
+.favorites-bar{display:flex;flex-wrap:wrap;gap:.6rem;margin:.2rem 0 1rem}
+.favorite-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.48rem .8rem;border:2px solid var(--line);background:var(--panel-2);border-radius:999px;font-size:.74rem;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.favorite-pill:hover{border-color:var(--accent);transform:translateY(-1px)}
+.favorite-pill .dot{color:var(--magenta)}
+
 .hero__highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin-top:1.3rem}
 .highlight{background:rgba(255,255,255,.72);backdrop-filter:blur(8px);border:2px solid var(--line);border-radius:16px;padding:1rem 1rem 1.05rem;box-shadow:4px 4px 0 var(--shadow)}
 .highlight strong{display:block;font-size:.98rem;text-transform:uppercase;margin-bottom:.28rem}
@@ -312,6 +317,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
   padding:.3rem .7rem;transform:rotate(5deg);
   box-shadow:2px 2px 0 var(--ink);
 }
+.fav-btn{
+  position:absolute;top:10px;left:10px;z-index:2;
+  width:34px;height:34px;border:2.5px solid var(--ink);border-radius:999px;
+  background:var(--panel);color:var(--magenta);display:grid;place-items:center;
+  box-shadow:2px 2px 0 var(--ink);font-size:1rem;
+}
+.fav-btn.is-fav{background:var(--sun);color:var(--cocoa)}
 .kicker{
   position:absolute;top:12px;left:12px;z-index:2;
   font-family:"Courier New",monospace;font-size:.6rem;letter-spacing:.16em;
@@ -394,6 +406,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 
 .empty{text-align:center;padding:1.4rem .5rem;color:var(--muted);font-size:.84rem}
 .empty svg{width:64px;height:auto;opacity:.55;margin-bottom:.5rem}
+.progress-shell{margin:0 0 .9rem;padding:.7rem .8rem;border:2px solid var(--line);border-radius:12px;background:var(--panel-2)}
+.progress-meta{display:flex;justify-content:space-between;align-items:center;gap:.5rem;font-size:.72rem;font-weight:bold;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.progress-track{height:8px;border-radius:999px;background:rgba(27,11,46,.12);overflow:hidden;margin-top:.5rem}
+.progress-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--magenta),var(--sun));transition:width .25s ease}
 
 .rcpt-sec{border-top:2px dashed var(--line);margin-top:.85rem;padding-top:.85rem}
 .rcpt-label{font-family:"Courier New",monospace;font-size:.62rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem}
@@ -675,6 +691,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
           </label>
           <div class="quickrow" id="quickPicks"></div>
         </div>
+        <div class="favorites-bar" id="favoritesBar" aria-live="polite"></div>
         <div class="chips" id="chips" role="group" aria-label="Filter sweets"></div>
         <div class="grid" id="grid"></div>
       </div>
@@ -685,6 +702,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
           <div class="receipt__head">
             <h3>Your order</h3>
             <p id="receiptDate">ClareVi Entereprise</p>
+          </div>
+          <div class="progress-shell" id="progressShell">
+            <div class="progress-meta">
+              <span>Order progress</span>
+              <strong id="orderProgressText">Start with your first sweet</strong>
+            </div>
+            <div class="progress-track"><span id="orderProgressFill"></span></div>
           </div>
           <div id="cartBody"></div>
 
@@ -951,6 +975,14 @@ const normalizePhone = raw => {
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
+function addQuickItem(id){
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  const vi = 0;
+  addToCart(p.id, vi, 1);
+  showToast(`${p.name} added to your order`);
+}
+
 /* ---------- theme ---------- */
 const themeBtn = $("#themeBtn");
 themeBtn.addEventListener("click", () => {
@@ -1071,13 +1103,16 @@ $("#searchInput").addEventListener("input", e => {
 $("#quickPicks").addEventListener("click", e => {
   const b = e.target.closest("[data-quick]");
   if (!b) return;
-  const p = PRODUCTS.find(x => x.id === b.dataset.quick);
-  if (!p) return;
-  const vi = 0;
-  addToCart(p.id, vi, 1);
-  showToast(`${p.name} added to your order`);
-  searchQuery = p.name.toLowerCase();
+  addQuickItem(b.dataset.quick);
+  searchQuery = b.dataset.quick.toLowerCase();
   $("#searchInput").value = searchQuery;
+  renderGrid();
+});
+
+$("#favoritesBar").addEventListener("click", e => {
+  const b = e.target.closest("[data-quick]");
+  if (!b) return;
+  addQuickItem(b.dataset.quick);
   renderGrid();
 });
 
@@ -1092,6 +1127,7 @@ function renderGrid(){
   $("#grid").innerHTML = list.map(p => `
     <article class="card" data-id="${p.id}">
       <div class="card__art art--${p.hue}">
+        <button class="fav-btn ${favorites.includes(p.id) ? "is-fav" : ""}" data-fav="${p.id}" aria-label="${favorites.includes(p.id) ? "Remove" : "Save"} ${p.name} as favourite">${favorites.includes(p.id) ? "★" : "☆"}</button>
         <span class="kicker">${p.kicker}</span>
         <span class="price-sticker">${SHOP.pricesNote}</span>
         ${art(p.art)}
@@ -1119,9 +1155,21 @@ function renderGrid(){
       </div>
     </article>`).join("");
 }
+renderFavoritesBar();
 renderGrid();
 
 $("#grid").addEventListener("click", e => {
+  const fav = e.target.closest("[data-fav]");
+  if (fav){
+    const id = fav.dataset.fav;
+    if (favorites.includes(id)) favorites = favorites.filter(x => x !== id);
+    else favorites.push(id);
+    localStorage.setItem("clarevi-favs", JSON.stringify(favorites));
+    renderFavoritesBar();
+    renderGrid();
+    return;
+  }
+
   const card = e.target.closest(".card");
   if (!card) return;
   const input = card.querySelector(".stepper input");
@@ -1148,14 +1196,21 @@ $("#grid").addEventListener("click", e => {
 /* ---------- cart ---------- */
 let cart = [];
 try { cart = JSON.parse(localStorage.getItem("mclare-cart") || "[]"); } catch(_) {}
+let favorites = [];
+try { favorites = JSON.parse(localStorage.getItem("clarevi-favs") || "[]"); } catch(_) {}
+let lastOrder = [];
+try { lastOrder = JSON.parse(localStorage.getItem("clarevi-last-order") || "[]"); } catch(_) {}
 
 function save(){ try { localStorage.setItem("mclare-cart", JSON.stringify(cart)); } catch(_) {} }
+function saveLastOrder(){ try { localStorage.setItem("clarevi-last-order", JSON.stringify(cart)); } catch(_) {} }
 
 function addToCart(id, vi, qty){
   const hit = cart.find(l => l.id === id && l.vi === vi);
   if (hit) hit.qty = Math.min(999, hit.qty + qty);
   else cart.push({ id, vi, qty });
-  save(); renderCart();
+  save();
+  if (cart.length) saveLastOrder();
+  renderCart();
 }
 
 function lineOf(l){
@@ -1178,6 +1233,23 @@ function showToast(message){
   showToast.timer = setTimeout(() => t.classList.remove("is-show"), 1800);
 }
 
+function renderFavoritesBar(){
+  const host = $("#favoritesBar");
+  if (!favorites.length){ host.innerHTML = ""; return; }
+  const items = favorites.map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean);
+  host.innerHTML = items.map(p => `<button class="favorite-pill" data-quick="${p.id}"><span class="dot">★</span>${p.name}</button>`).join("");
+}
+
+function renderOrderProgress(){
+  const fill = $("#orderProgressFill");
+  const text = $("#orderProgressText");
+  if (!fill || !text) return;
+  const count = cart.reduce((s, l) => s + l.qty, 0);
+  const progress = Math.min(100, count * 18 + (cart.length ? 20 : 0) + (document.querySelector('input[name="deliv"]:checked') ? 8 : 0));
+  fill.style.width = `${progress}%`;
+  text.textContent = progress < 35 ? "Start with your first sweet" : progress < 70 ? "Nice, your order is taking shape" : "You’re ready to send it";
+}
+
 function renderCart(){
   const body = $("#cartBody");
   if (!cart.length){
@@ -1188,6 +1260,7 @@ function renderCart(){
         <path d="M38 24 v-8 a12 12 0 0 1 24 0 v8" fill="none" stroke="currentColor" stroke-width="5"/>
       </svg>
       <div>Nothing here yet.<br>Add something from the counter.</div>
+      ${lastOrder.length ? `<button class="btn btn--ghost" id="restoreLast" style="margin-top:.75rem">Re-add last order</button>` : ""}
     </div>`;
   } else {
     body.innerHTML = `<ul class="lines">${cart.map((l, i) => {
@@ -1210,13 +1283,24 @@ function renderCart(){
   const count = cart.reduce((s, l) => s + l.qty, 0);
   $("#fabCount").textContent = count;
   $("#receiptDate").textContent = count ? `${count} item${count > 1 ? "s" : ""} · not yet sent` : "ClareVi Entereprise";
+  renderOrderProgress();
 }
 
 $("#cartBody").addEventListener("click", e => {
+  const restore = e.target.closest("#restoreLast");
+  if (restore){
+    cart = lastOrder.map(l => ({ ...l }));
+    save();
+    renderCart();
+    showToast("Last order restored");
+    return;
+  }
   const rm = e.target.closest("[data-rm]");
   if (!rm) return;
   cart.splice(Number(rm.dataset.rm), 1);
-  save(); renderCart();
+  save();
+  if (cart.length) saveLastOrder();
+  renderCart();
 });
 $("#delivery").addEventListener("change", renderCart);
 renderCart();
