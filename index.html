@@ -333,6 +333,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 .card__body{padding:1rem 1.05rem 1.15rem;display:flex;flex-direction:column;gap:.7rem;flex:1}
 .card__body h3{font-size:1.25rem;text-transform:uppercase}
 .card__desc{font-size:.87rem;color:var(--muted);margin:0;line-height:1.5}
+.card__qty-pill{display:inline-flex;align-self:flex-start;align-items:center;gap:.35rem;padding:.35rem .6rem;border:2px solid var(--ink);border-radius:999px;background:var(--sun);color:var(--cocoa);font-family:"Arial Black",sans-serif;font-size:.72rem;letter-spacing:.04em;text-transform:uppercase;box-shadow:2px 2px 0 rgba(0,0,0,.14);transform:translateY(2px);opacity:0;transition:transform .16s ease,opacity .16s ease,background .16s ease}
+.card__qty-pill.is-visible{opacity:1;transform:translateY(0)}
+.card.is-selected{transform:translateY(-3px) scale(1.01);box-shadow:8px 10px 0 var(--shadow)}
+.card.is-selected .card__qty-pill{background:var(--lime)}
 .facts{display:flex;flex-wrap:wrap;gap:.35rem;list-style:none;padding:0;margin:0}
 .facts li{
   font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;font-weight:bold;
@@ -549,13 +553,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 }
 .toast.is-show{opacity:1;transform:translateY(0)}
 
-.pick-stage{position:fixed;inset:0;pointer-events:none;z-index:210;display:grid;place-items:center;opacity:0;transition:opacity .2s ease}
+.pick-stage{position:fixed;inset:0;pointer-events:none;z-index:260;display:grid;place-items:center;opacity:0;transition:opacity .2s ease;overflow:visible}
 .pick-stage.is-active{opacity:1}
 .pick-stage__bubble{
-  width:92px;height:92px;border-radius:999px;border:3px solid var(--ink);
+  position:absolute;left:50%;top:50%;width:92px;height:92px;border-radius:999px;border:3px solid var(--ink);
   background:linear-gradient(135deg,var(--sun),var(--magenta));display:grid;place-items:center;
   color:#fff;font-size:2.1rem;box-shadow:10px 10px 0 rgba(27,11,46,.22);
-  transform:translateY(0) scale(.8);animation:pick-pop .9s ease forwards;
+  transform:translate(-50%, -50%) scale(.78);animation:pick-pop .9s ease forwards;
 }
 .pick-stage__bag{
   position:absolute;right:8%;bottom:8%;width:140px;height:140px;border-radius:24px;
@@ -563,12 +567,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
   display:grid;place-items:center;font-size:2.2rem;box-shadow:8px 8px 0 rgba(27,11,46,.2);
   transform:translateY(24px) scale(.96);opacity:0;animation:bag-pop .9s ease forwards;
 }
+.pick-stage__qty{position:absolute;top:-8px;right:-8px;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;border-radius:999px;background:var(--magenta);color:#fff;border:2px solid var(--ink);font-family:"Arial Black",sans-serif;font-size:.8rem;padding:0 .3rem;box-shadow:2px 2px 0 rgba(27,11,46,.25)}
 .pick-stage__bag::after{content:"🎒";font-size:2.6rem}
 @keyframes pick-pop{
-  0%{transform:translateY(10px) scale(.8);opacity:0}
-  40%{transform:translateY(-18px) scale(1.06);opacity:1}
-  70%{transform:translateY(-6px) scale(.96)}
-  100%{transform:translateY(-220px) scale(.7);opacity:0}
+  0%{opacity:0;transform:translate(calc(-50% + var(--start-x, 0px)), calc(-50% + var(--start-y, 0px))) scale(.78)}
+  20%{opacity:1;transform:translate(calc(-50% + var(--start-x, 0px) + 8px), calc(-50% + var(--start-y, 0px) - 20px)) scale(1.02)}
+  55%{opacity:1;transform:translate(calc(-50% + var(--end-x, 0px)), calc(-50% + var(--end-y, 0px))) scale(.95)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--end-x, 0px)), calc(-50% + var(--end-y, 0px) + 24px)) scale(.55)}
 }
 @keyframes bag-pop{
   0%{transform:translateY(24px) scale(.96);opacity:0}
@@ -925,7 +930,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 <div class="toast" id="toast" aria-live="polite"></div>
 <div class="pick-stage" id="pickStage" aria-hidden="true">
   <div class="pick-stage__bubble" id="pickBubble">✦</div>
-  <div class="pick-stage__bag"></div>
+  <div class="pick-stage__bag">
+    <span class="pick-stage__qty" id="pickQty"></span>
+  </div>
 </div>
 
 <script>
@@ -1179,6 +1186,7 @@ function renderGrid(){
       <div class="card__body">
         <h3>${p.name}</h3>
         <p class="card__desc">${p.desc}</p>
+        <div class="card__qty-pill" aria-live="polite">Qty 1</div>
         <ul class="facts">${p.facts.map(f => `<li>${f}</li>`).join("")}</ul>
         <div class="opts">
           ${p.variants.map((v, i) => `
@@ -1222,6 +1230,7 @@ $("#grid").addEventListener("click", e => {
   if (step){
     const n = Math.min(99, Math.max(1, (parseInt(input.value, 10) || 1) + Number(step.dataset.step)));
     input.value = n;
+    updateSelectionPreview(card, n);
     return;
   }
 
@@ -1231,10 +1240,11 @@ $("#grid").addEventListener("click", e => {
     const vi = Number(card.querySelector(`input[name="v-${p.id}"]:checked`).value);
     const qty = Math.max(1, parseInt(input.value, 10) || 1);
     addToCart(p.id, vi, qty);
-      add.classList.add("is-added");
-    add.textContent = "Added ✓";
+    updateSelectionPreview(card, qty);
+    add.classList.add("is-added");
+    add.textContent = qty > 1 ? `Added ×${qty}` : "Added ✓";
     const icon = p.id === "magic" ? "✦" : p.id === "comb" ? "🪄" : p.id === "shot" ? "🍫" : "🎁";
-    playPickAnimation(icon);
+    playPickAnimation(icon, qty, add);
     if (window.innerWidth <= 1000) {
       const rail = $("#rail");
       if (rail && !rail.classList.contains("is-open")) {
@@ -1286,11 +1296,40 @@ function showToast(message){
   showToast.timer = setTimeout(() => t.classList.remove("is-show"), 1800);
 }
 
-function playPickAnimation(icon = "✦"){
+function updateSelectionPreview(card, qty){
+  const pill = card.querySelector(".card__qty-pill");
+  if (pill){
+    pill.textContent = qty > 1 ? `Qty ${qty}` : "Qty 1";
+    pill.classList.add("is-visible");
+  }
+  card.classList.add("is-selected");
+  clearTimeout(card._previewTimer);
+  card._previewTimer = setTimeout(() => {
+    card.classList.remove("is-selected");
+    if (pill) pill.classList.remove("is-visible");
+  }, 800);
+}
+
+function playPickAnimation(icon = "✦", qty = 1, originEl = null){
   const stage = $("#pickStage");
   const bubble = $("#pickBubble");
-  if (!stage || !bubble) return;
+  const qtyBadge = $("#pickQty");
+  if (!stage || !bubble || !qtyBadge) return;
   bubble.textContent = icon;
+  qtyBadge.textContent = qty > 1 ? `×${qty}` : "";
+  qtyBadge.style.display = qty > 1 ? "inline-flex" : "none";
+  const stageRect = stage.getBoundingClientRect();
+  const bag = stage.querySelector(".pick-stage__bag");
+  const originRect = originEl ? originEl.getBoundingClientRect() : null;
+  const bagRect = bag ? bag.getBoundingClientRect() : null;
+  const startX = originRect ? originRect.left + originRect.width / 2 - stageRect.width / 2 : 0;
+  const startY = originRect ? originRect.top + originRect.height / 2 - stageRect.height / 2 : -40;
+  const endX = bagRect ? bagRect.left + bagRect.width / 2 - stageRect.width / 2 : 0;
+  const endY = bagRect ? bagRect.top + bagRect.height / 2 - stageRect.height / 2 : 0;
+  bubble.style.setProperty("--start-x", `${startX}px`);
+  bubble.style.setProperty("--start-y", `${startY}px`);
+  bubble.style.setProperty("--end-x", `${endX}px`);
+  bubble.style.setProperty("--end-y", `${endY}px`);
   stage.classList.remove("is-active");
   void stage.offsetWidth;
   stage.classList.add("is-active");
