@@ -1023,6 +1023,13 @@ const normalizePhone = raw => {
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("mclare-cart") || "[]"); } catch(_) {}
+let favorites = [];
+try { favorites = JSON.parse(localStorage.getItem("clarevi-favs") || "[]"); } catch(_) {}
+let lastOrder = [];
+try { lastOrder = JSON.parse(localStorage.getItem("clarevi-last-order") || "[]"); } catch(_) {}
+
 function addQuickItem(id){
   const p = PRODUCTS.find(x => x.id === id);
   if (!p) return;
@@ -1257,13 +1264,6 @@ $("#grid").addEventListener("click", e => {
 });
 
 /* ---------- cart ---------- */
-let cart = [];
-try { cart = JSON.parse(localStorage.getItem("mclare-cart") || "[]"); } catch(_) {}
-let favorites = [];
-try { favorites = JSON.parse(localStorage.getItem("clarevi-favs") || "[]"); } catch(_) {}
-let lastOrder = [];
-try { lastOrder = JSON.parse(localStorage.getItem("clarevi-last-order") || "[]"); } catch(_) {}
-
 function save(){ try { localStorage.setItem("mclare-cart", JSON.stringify(cart)); } catch(_) {} }
 function saveLastOrder(){ try { localStorage.setItem("clarevi-last-order", JSON.stringify(cart)); } catch(_) {} }
 
