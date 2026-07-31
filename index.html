@@ -620,8 +620,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
         </div>
         <div class="hero__stats">
           <div>
-            <div class="stat__n tnum">₦200</div>
-            <div class="stat__l">Cheapest sweet</div>
+            <div class="stat__n">Ask</div>
+            <div class="stat__l">Current prices</div>
           </div>
           <div>
             <div class="stat__n">Free</div>
@@ -871,9 +871,10 @@ const SHOP = {
   // Her WhatsApp number in full international format, no + or spaces.
   // Example for Nigeria: "2348012345678". Leave "" and the button will
   // give the customer a copyable order instead of a broken link.
-  whatsapp: "",
+  whatsapp: "08036494100",
   deliveryFee: 1000,          // naira, for "Delivery nearby"
-  currency: "₦"
+  currency: "₦",
+  pricesNote: "Current prices on request"
 };
 
 const PRODUCTS = [
@@ -940,6 +941,13 @@ const PRODUCTS = [
 /* ================== end of edit block ====================== */
 
 const money = n => SHOP.currency + Math.round(n).toLocaleString("en-NG");
+const normalizePhone = raw => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("234")) return digits;
+  if (digits.startsWith("0")) return `234${digits.slice(1)}`;
+  return digits;
+};
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 
@@ -958,7 +966,7 @@ const tickerBits = [
   "Crazy Shot · chocolate + milk",
   "Comb Pop · 4 colours",
   "Free pickup at school",
-  "Party bags from ₦2,500",
+  "Party bags on request",
   "Sealed original packs"
 ];
 $("#tickerTrack").innerHTML = [...tickerBits, ...tickerBits]
@@ -1085,7 +1093,7 @@ function renderGrid(){
     <article class="card" data-id="${p.id}">
       <div class="card__art art--${p.hue}">
         <span class="kicker">${p.kicker}</span>
-        <span class="price-sticker">from ${money(Math.min(...p.variants.map(v => v.price)))}</span>
+        <span class="price-sticker">${SHOP.pricesNote}</span>
         ${art(p.art)}
       </div>
       <div class="card__body">
@@ -1314,8 +1322,9 @@ $("#checkout").addEventListener("click", () => {
   }
   const msg = orderMessage();
 
-  if (SHOP.whatsapp){
-    window.open(`https://wa.me/${SHOP.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  const waNumber = normalizePhone(SHOP.whatsapp);
+  if (waNumber){
+    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
     return;
   }
   // No number set yet — hand the customer their order instead of a dead link.
