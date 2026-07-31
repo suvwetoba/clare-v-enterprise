@@ -1265,7 +1265,7 @@ function buildBag(budget){
       }).join("")}
       <li class="bag-total"><span>${pieces} sweets · ${money(budget - left)} spent</span><span>${money(total)}</span></li>
       </ul>`
-    : `<div class="bag-idle">That budget is under the cheapest sweet. Try ₦2,500.</div>`;
+    : `<div class="bag-idle">That budget is under the Cheapest sweet. Try ₦2,500.</div>`;
 
   $("#bagAdd").style.display = picked.length ? "inline-flex" : "none";
 }
