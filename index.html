@@ -549,6 +549,33 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 }
 .toast.is-show{opacity:1;transform:translateY(0)}
 
+.pick-stage{position:fixed;inset:0;pointer-events:none;z-index:210;display:grid;place-items:center;opacity:0;transition:opacity .2s ease}
+.pick-stage.is-active{opacity:1}
+.pick-stage__bubble{
+  width:92px;height:92px;border-radius:999px;border:3px solid var(--ink);
+  background:linear-gradient(135deg,var(--sun),var(--magenta));display:grid;place-items:center;
+  color:#fff;font-size:2.1rem;box-shadow:10px 10px 0 rgba(27,11,46,.22);
+  transform:translateY(0) scale(.8);animation:pick-pop .9s ease forwards;
+}
+.pick-stage__bag{
+  position:absolute;right:8%;bottom:8%;width:140px;height:140px;border-radius:24px;
+  border:3px solid var(--ink);background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  display:grid;place-items:center;font-size:2.2rem;box-shadow:8px 8px 0 rgba(27,11,46,.2);
+  transform:translateY(24px) scale(.96);opacity:0;animation:bag-pop .9s ease forwards;
+}
+.pick-stage__bag::after{content:"🎒";font-size:2.6rem}
+@keyframes pick-pop{
+  0%{transform:translateY(10px) scale(.8);opacity:0}
+  40%{transform:translateY(-18px) scale(1.06);opacity:1}
+  70%{transform:translateY(-6px) scale(.96)}
+  100%{transform:translateY(-220px) scale(.7);opacity:0}
+}
+@keyframes bag-pop{
+  0%{transform:translateY(24px) scale(.96);opacity:0}
+  40%{transform:translateY(0) scale(1.02);opacity:1}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+
 .modal{
   position:fixed;inset:0;z-index:200;display:none;
   place-items:center;padding:1.2rem;
@@ -886,6 +913,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
 </div>
 
 <div class="toast" id="toast" aria-live="polite"></div>
+<div class="pick-stage" id="pickStage" aria-hidden="true">
+  <div class="pick-stage__bubble" id="pickBubble">✦</div>
+  <div class="pick-stage__bag"></div>
+</div>
 
 <script>
 /* ============================================================
@@ -912,7 +943,7 @@ const PRODUCTS = [
     desc: "A stretchy rainbow spring with a sealed cup of fruit candy inside. The sweet explodes in one bite; the spring keeps working long after it's gone.",
     facts: ["Fruit candy", "Toy included", "Ages 4+"],
     variants: [
-      { label: "1 piece",        price: 300  },
+      { label: "1 piece",        price: 150  },
       { label: "Pack of 6",      price: 1650, note: "save ₦150" },
       { label: "Full box of 24", price: 6000, note: "party size" }
     ]
@@ -1189,9 +1220,12 @@ $("#grid").addEventListener("click", e => {
   if (add){
     const p = PRODUCTS.find(x => x.id === add.dataset.add);
     const vi = Number(card.querySelector(`input[name="v-${p.id}"]:checked`).value);
-    addToCart(p.id, vi, Math.max(1, parseInt(input.value, 10) || 1));
+    const qty = Math.max(1, parseInt(input.value, 10) || 1);
+    addToCart(p.id, vi, qty);
     add.classList.add("is-added");
     add.textContent = "Added ✓";
+    const icon = p.id === "magic" ? "✦" : p.id === "comb" ? "🪄" : p.id === "shot" ? "🍫" : "🎁";
+    playPickAnimation(icon);
     burst(add);
     setTimeout(() => { add.classList.remove("is-added"); add.textContent = "Add to order"; }, 1300);
   }
@@ -1235,6 +1269,18 @@ function showToast(message){
   t.classList.add("is-show");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => t.classList.remove("is-show"), 1800);
+}
+
+function playPickAnimation(icon = "✦"){
+  const stage = $("#pickStage");
+  const bubble = $("#pickBubble");
+  if (!stage || !bubble) return;
+  bubble.textContent = icon;
+  stage.classList.remove("is-active");
+  void stage.offsetWidth;
+  stage.classList.add("is-active");
+  clearTimeout(playPickAnimation.timer);
+  playPickAnimation.timer = setTimeout(() => stage.classList.remove("is-active"), 900);
 }
 
 function renderFavoritesBar(){
